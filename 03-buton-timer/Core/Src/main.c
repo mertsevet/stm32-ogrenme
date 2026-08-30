@@ -43,7 +43,7 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-volatile uint32_t sayac = 0;
+volatile uint8_t calisiyor = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,7 +90,6 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,7 +99,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  sayac++;
   }
   /* USER CODE END 3 */
 }
@@ -204,6 +202,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -211,16 +215,44 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-	void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+	void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+
+		static uint32_t son_basma = 0;
+
+		if(GPIO_Pin == GPIO_PIN_0){
+			if( HAL_GetTick() - son_basma > 200){
+			son_basma = HAL_GetTick();
+			if(calisiyor == 0){
+				HAL_TIM_Base_Start_IT(&htim2);
+				calisiyor = 1;
+			}
+			else{
+				HAL_TIM_Base_Stop_IT(&htim2);
+				calisiyor = 0;
+				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+			}
+			}
+		}
 
 	}
+	void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+	{
+	    if (htim->Instance == TIM2) {
+	        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+	    }
+	}
+
+
 /* USER CODE END 4 */
 
 /**
